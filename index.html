@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noradrenalin İnfüzyon Hesaplayıcı</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      padding: 20px;
+    }
+    #dose {
+      width: 100%;
+      appearance: none;
+      height: 8px;
+      border-radius: 5px;
+      background: green; /* Başlangıç rengi yeşil */
+      outline: none;
+      opacity: 0.9;
+      transition: background 0.3s ease-in-out;
+    }
+    #dose::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: white;
+      cursor: pointer;
+    }
+    #dose::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Noradrenalin İnfüzyon Hesaplayıcı</h2>
+    <form id="noradrenalinForm">
+      <div class="form-group">
+        <label for="weight">Hastanın Kilosu (kg):</label>
+        <input type="number" class="form-control" id="weight" placeholder="Hastanın kilosunu girin" required>
+      </div>
+      <div class="form-group">
+        <label for="dose">Noradrenalin Dozu (mcg/kg/dk):</label>
+        <input type="range" class="form-control-range" id="dose" min="0.1" max="0.75" step="0.01" value="0.1" oninput="updateDoseColor()" required>
+        <small>Seçilen Doz: <span id="doseValue">0.1</span> mcg/kg/dk</small>
+      </div>
+      <div class="form-group">
+        <label>Kullanılan Mayii Miktarı (%5 Dekstroz - D5W):</label>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="fluidVolume" id="fluidVolume100" value="100" checked required>
+          <label class="form-check-label" for="fluidVolume100">
+            100cc D5W
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="fluidVolume" id="fluidVolume500" value="500" required>
+          <label class="form-check-label" for="fluidVolume500">
+            500cc D5W
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="fluidVolume" id="fluidVolume1000" value="1000" required>
+          <label class="form-check-label" for="fluidVolume1000">
+            1000cc D5W
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="ampoules">Kullanılacak Ampul Sayısı:</label>
+        <input type="number" class="form-control" id="ampoules" placeholder="Sıvıya katılacak ampul sayısını girin" value="1" min="1" required oninput="updateFluidVolume()">
+      </div>
+      <button type="button" class="btn btn-primary btn-block" onclick="calculateInfusion()">Hesapla</button>
+      <button type="reset" class="btn btn-secondary btn-block" onclick="resetForm()">Formu Sıfırla</button>
+    </form>
+    <hr>
+    <h4>Sonuçlar:</h4>
+    <p id="resultCcHour">İnfüzyon Hızı: <strong>0 cc/saat</strong></p>
+    <p id="resultDropsMin">İnfüzyon Hızı: <strong>0 damla/dk</strong></p>
+  </div>
+
+  <script>
+    function updateDoseColor() {
+      const dose = document.getElementById('dose').value;
+      const doseValueSpan = document.getElementById('doseValue');
+      doseValueSpan.innerText = dose;
+      
+      let backgroundColor;
+      if (dose <= 0.2) {
+        backgroundColor = 'green';
+      } else if (dose > 0.2 && dose <= 0.4) {
+        backgroundColor = 'yellow';
+      } else if (dose > 0.4 && dose <= 0.6) {
+        backgroundColor = 'orange';
+      } else {
+        backgroundColor = 'red';
+      }
+
+      document.getElementById('dose').style.background = backgroundColor;
+    }
+
+    function updateFluidVolume() {
+      const ampoules = parseInt(document.getElementById('ampoules').value);
+      const fluidVolume = document.querySelector('input[name="fluidVolume"]:checked').value;
+      const totalVolume = parseInt(fluidVolume) + (ampoules * 4); // Her ampul için 4 ml ekle
+
+      // Seçilen sıvı miktarını güncelle
+      document.querySelector(`label[for="fluidVolume${fluidVolume}"]`).innerText = `${fluidVolume}cc D5W + ${ampoules * 4}ml (Toplam: ${totalVolume} ml)`;
+    }
+
+    function calculateInfusion() {
+      const weight = parseFloat(document.getElementById('weight').value);
+      const dose = parseFloat(document.getElementById('dose').value);
+      let fluidVolume = parseFloat(document.querySelector('input[name="fluidVolume"]:checked').value);
+      const ampoules = parseFloat(document.getElementById('ampoules').value);
+
+      fluidVolume += ampoules * 4; // Ampul sayısına göre sıvı miktarını artır
+
+      const noradrenalinConcentration = 4; // 1 ampul Noradrenalin 4 mg / 4 ml
+      const ampouleVolume = 4; // 1 ampul 4 ml
+      const noradrenalinInMgPerMl = (noradrenalinConcentration * ampoules) / ampouleVolume; // Ampul sayısına göre Noradrenalinin mg/ml oranı
+      
+      // Dozu mcg/dk'ya çevir
+      const doseMcgMin = dose * weight; // mcg/kg/dk * kilo = toplam mcg/dk
+      const doseMgMin = doseMcgMin / 1000; // mcg'yi mg'ye çevir
+
+      // D5W başına mg Noradrenalin miktarı
+      const noradrenalinPerMlD5W = noradrenalinInMgPerMl / fluidVolume;
+
+      // cc/dk cinsinden infüzyon hızı
+      const ccPerMin = doseMgMin / noradrenalinPerMlD5W;
+
+      // cc/saat cinsinden infüzyon hızı (cc/dk * 60)
+      const ccPerHour = ccPerMin * 60;
+
+      // damla/dk cinsinden infüzyon hızı (1 cc = 20 damla)
+      const dropsPerMin = ccPerMin * 20;
+
+      // Sonuçları güncelle
+      document.getElementById('resultCcHour').innerHTML = `İnfüzyon Hızı: <strong>${ccPerHour.toFixed(2)} cc/saat</strong>`;
+      document.getElementById('resultDropsMin').innerHTML = `İnfüzyon Hızı: <strong>${dropsPerMin.toFixed(2)} damla/dk</strong>`;
+    }
+
+    function resetForm() {
+      document.getElementById('doseValue').innerText = '0.1'; // Başlangıç değeri olarak 0.1 göster
+      updateFluidVolume(); // Sıvı miktarını da sıfırlarken güncelle
+    }
+  </script>
+</body>
+</html>
